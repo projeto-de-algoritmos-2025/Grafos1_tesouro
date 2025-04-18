@@ -587,4 +587,231 @@ class Jogo:
             self.botoes["seguir"].ativo = True
         else:
             self.mensagem = "Não foi possível encontrar um caminho até o tesouro!"
+
+    def atualizar_animacao_bfs(self):
+        tempo_atual = pygame.time.get_ticks()
+        
+        # Se passou o intervalo de tempo para o próximo passo
+        if tempo_atual - self.tempo_ultimo_passo >= self.intervalo_animacao:
+            self.tempo_ultimo_passo = tempo_atual
+            
+            # Se ainda há passos na animação
+            if self.indice_historico < len(self.historico_busca):
+                passo = self.historico_busca[self.indice_historico]
+                self.visitados = passo['visitados']
+                self.fronteira = passo['fronteira']
+                self.caminho_atual_bfs = passo['caminho_atual']
+                self.armadilhas_evitadas = passo.get('armadilhas_evitadas', set())
+                
+                if len(self.caminho_atual_bfs) > 1:
+                    ultimo_no = self.caminho_atual_bfs[-1]
+                    penultimo_no = self.caminho_atual_bfs[-2]
+                    self.mensagem = f"Explorando de {self.grafo.nos[penultimo_no].nome} para {self.grafo.nos[ultimo_no].nome}..."
+                else:
+                    self.mensagem = "Iniciando busca do caminho..."
+                
+                self.indice_historico += 1
+            else:
+                # Animação concluída
+                self.estado = "JOGANDO"
+                if self.caminho_atual:
+                    self.mensagem = f"Caminho encontrado com BFS! {len(self.visitados)} nós visitados, {len(self.armadilhas_evitadas)} armadilhas evitadas, melhor caminho tem {len(self.caminho_atual)} nós."
+                else:
+                    self.mensagem = "Não foi possível encontrar um caminho até o tesouro!"
+                self.caminho_atual_bfs = None
+
+    def atualizar_animacao_dfs(self):
+        tempo_atual = pygame.time.get_ticks()
+        
+        # Se passou o intervalo de tempo para o próximo passo
+        if tempo_atual - self.tempo_ultimo_passo >= self.intervalo_animacao:
+            self.tempo_ultimo_passo = tempo_atual
+            
+            # Se ainda há passos na animação
+            if self.indice_historico < len(self.historico_busca):
+                passo = self.historico_busca[self.indice_historico]
+                self.visitados = passo['visitados']
+                self.fronteira = passo['fronteira']
+                self.caminho_atual_bfs = passo['caminho_atual']
+                self.armadilhas_evitadas = passo.get('armadilhas_evitadas', set())
+                
+                if len(self.caminho_atual_bfs) > 1:
+                    ultimo_no = self.caminho_atual_bfs[-1]
+                    penultimo_no = self.caminho_atual_bfs[-2]
+                    self.mensagem = f"Explorando em profundidade de {self.grafo.nos[penultimo_no].nome} para {self.grafo.nos[ultimo_no].nome}..."
+                else:
+                    self.mensagem = "Iniciando busca em profundidade..."
+                
+                self.indice_historico += 1
+            else:
+                # Animação concluída
+                self.estado = "JOGANDO"
+                if self.caminho_atual:
+                    self.mensagem = f"Caminho encontrado com DFS! {len(self.visitados)} nós visitados, {len(self.armadilhas_evitadas)} armadilhas evitadas, caminho tem {len(self.caminho_atual)} nós."
+                else:
+                    self.mensagem = "Não foi possível encontrar um caminho até o tesouro!"
+                self.caminho_atual_bfs = None
     
+    def seguir_caminho(self):
+        if not self.caminho_atual or len(self.caminho_atual) <= 1:
+            self.mensagem = "Não há caminho para seguir!"
+            return
+        
+        # Inicia a partir do segundo nó no caminho (o primeiro é onde já estamos)
+        indice_atual = self.caminho_atual.index(self.no_atual_id)
+        
+        if indice_atual + 1 < len(self.caminho_atual):
+            proximo_no = self.caminho_atual[indice_atual + 1]
+            self.mover_para(proximo_no)
+        else:
+            self.mensagem = "Você já está no fim do caminho!"
+            self.botoes["seguir"].ativo = False
+        
+        # Se o jogo acabou, desativa o botão de seguir
+        if self.estado != "JOGANDO":
+            self.botoes["seguir"].ativo = False
+    
+    def desenhar(self, tela):
+        # Limpa a tela
+        tela.fill(AZUL_ESCURO)
+        
+        # Desenha o grafo (tabuleiro)
+        if self.estado == "ANIMANDO_BFS" or self.estado == "ANIMANDO_DFS":
+            self.grafo.desenhar(tela, self.no_atual_id, self.caminho_atual, 
+                               self.visitados, self.fronteira, self.caminho_atual_bfs,
+                               self.armadilhas_evitadas)
+        else:
+            self.grafo.desenhar(tela, self.no_atual_id, self.caminho_atual)
+        
+        # Desenha a área de informações
+        pygame.draw.rect(tela, CINZA, self.painel_info)
+        pygame.draw.line(tela, PRETO, (1050, 0), (1050, ALTURA), 3)
+        
+        # Desenha o título no painel
+        titulo = fonte_titulo.render("Caça ao Tesouro", True, PRETO)
+        tela.blit(titulo, (self.painel_info.centerx - titulo.get_width()//2, 20))
+        
+        # Desenha a legenda
+        pygame.draw.rect(tela, BRANCO, (1070, 80, 310, 230))
+        pygame.draw.rect(tela, PRETO, (1070, 80, 310, 230), 2)
+        
+        legenda_titulo = fonte_grande.render("Legenda:", True, PRETO)
+        tela.blit(legenda_titulo, (1080, 90))
+        
+        # Itens da legenda
+        legenda_items = [
+            (AZUL, "Posição Atual"),
+            (VERDE, "Tesouro"),
+            (VERMELHO, "Armadilha"),
+            (AMARELO, "Caminho Final"),
+            ((255, 140, 0), "Explorando agora"),
+            ((173, 216, 230), "Fronteira"),
+            ((147, 112, 219), "Visitado"),
+            ((255, 192, 203), "Armadilha Evitada"),
+            (CINZA, "Local Normal")
+        ]
+        
+        for i, (cor, texto) in enumerate(legenda_items):
+            y = 120 + i * 22
+            pygame.draw.circle(tela, cor, (1085, y), 8)
+            pygame.draw.circle(tela, PRETO, (1085, y), 8, 1)
+            texto_leg = fonte_media.render(texto, True, PRETO)
+            tela.blit(texto_leg, (1100, y - 8))
+        
+        # Desenha informações do local atual
+        info_y = 340
+        local_titulo = fonte_grande.render("Local Atual:", True, PRETO)
+        tela.blit(local_titulo, (1070, info_y))
+        
+        no_atual = self.grafo.nos[self.no_atual_id]
+        nome_local = fonte_media.render(f"{no_atual.nome}", True, PRETO)
+        tela.blit(nome_local, (1070, info_y + 30))
+        
+        # Desenhar a descrição do local em multi-linhas
+        desc_y = info_y + 50
+        self.renderizar_texto_multilinhas(tela, no_atual.descricao, 1070, desc_y, 310)
+        
+        # Desenha botões
+        for botao in self.botoes.values():
+            botao.desenhar(tela)
+        
+        # Desenha a mensagem
+        mensagem_surf = pygame.Surface((1030, 90))
+        mensagem_surf.fill(BRANCO)
+        pygame.draw.rect(mensagem_surf, PRETO, (0, 0, 1030, 90), 2)
+        self.renderizar_texto_multilinhas(mensagem_surf, self.mensagem, 10, 10, 1010)
+        tela.blit(mensagem_surf, (10, 800))
+        
+        # Se o jogo acabou, mostra uma mensagem especial
+        if self.estado not in ["JOGANDO", "ANIMANDO_BFS", "ANIMANDO_DFS"]:
+            cor_overlay = VERDE if self.estado == "VITORIA" else VERMELHO
+            overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+            overlay.fill((cor_overlay[0], cor_overlay[1], cor_overlay[2], 100))
+            tela.blit(overlay, (0, 0))
+            
+            status_texto = "VITÓRIA!" if self.estado == "VITORIA" else "DERROTA!"
+            status_surf = fonte_titulo.render(status_texto, True, PRETO)
+            tela.blit(status_surf, (525 - status_surf.get_width()//2, 400))
+    
+    def renderizar_texto_multilinhas(self, superficie, texto, x, y, largura_max, cor=PRETO):
+        palavras = texto.split()
+        linhas = []
+        linha_atual = []
+        
+        for palavra in palavras:
+            teste_linha = ' '.join(linha_atual + [palavra])
+            largura_texto = fonte_pequena.size(teste_linha)[0]
+            
+            if largura_texto > largura_max:
+                linhas.append(' '.join(linha_atual))
+                linha_atual = [palavra]
+            else:
+                linha_atual.append(palavra)
+        
+        if linha_atual:
+            linhas.append(' '.join(linha_atual))
+        
+        for i, linha in enumerate(linhas):
+            texto_surf = fonte_pequena.render(linha, True, cor)
+            superficie.blit(texto_surf, (x, y + i * 20))
+    
+    def processar_evento(self, evento):
+        if evento.type == pygame.QUIT:
+            return False
+        
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            pos = pygame.mouse.get_pos()
+            
+            # Se estiver animando, ignora cliques (exceto no botão de reiniciar)
+            if (self.estado == "ANIMANDO_BFS" or self.estado == "ANIMANDO_DFS") and not self.botoes["reiniciar"].clicado(pos):
+                return True
+            
+            # Verifica cliques nos botões
+            if self.botoes["mover"].clicado(pos):
+                if self.no_selecionado and self.no_selecionado in self.grafo.arestas[self.no_atual_id]:
+                    self.mover_para(self.no_selecionado)
+                    self.no_selecionado = None
+                else:
+                    self.mensagem = "Selecione um local conectado para se mover!"
+            
+            elif self.botoes["bfs"].clicado(pos) and self.estado == "JOGANDO":
+                self.calcular_caminho("BFS")
+            
+            elif self.botoes["dfs"].clicado(pos) and self.estado == "JOGANDO":
+                self.calcular_caminho("DFS")
+            
+            elif self.botoes["seguir"].clicado(pos) and self.estado == "JOGANDO":
+                self.seguir_caminho()
+            
+            elif self.botoes["reiniciar"].clicado(pos):
+                self.reiniciar()
+            
+            # Verifica cliques nos nós do grafo
+            else:
+                for no_id, no in self.grafo.nos.items():
+                    if no.contem_ponto(pos):
+                        self.no_selecionado = no_id
+                        self.mensagem = f"Selecionado: {no.nome}"
+                        break
+        
+        return True
