@@ -815,3 +815,28 @@ class Jogo:
                         break
         
         return True
+
+def main():
+    jogo = Jogo()
+    clock = pygame.time.Clock()
+    executando = True
+    
+    while executando:
+        for evento in pygame.event.get():
+            executando = jogo.processar_evento(evento)
+        
+        # Atualiza a animação se necessário
+        if jogo.estado == "ANIMANDO_BFS":
+            jogo.atualizar_animacao_bfs()
+        elif jogo.estado == "ANIMANDO_DFS":
+            jogo.atualizar_animacao_dfs()
+        
+        jogo.desenhar(tela)
+        pygame.display.flip()
+        clock.tick(60)
+    
+    pygame.quit()
+    sys.exit()
+
+if __name__ == "__main__":
+    main() 
