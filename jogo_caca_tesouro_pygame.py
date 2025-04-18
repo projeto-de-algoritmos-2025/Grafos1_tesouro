@@ -377,3 +377,114 @@ class Grafo:
                         })
         
         return None, historico_busca, visitados, fronteira, armadilhas_evitadas
+
+def criar_mapa():
+    grafo = Grafo()
+    
+    # Posições dos nós ajustadas para o tabuleiro maior
+    posicoes = {
+        1: (200, 130),    # Entrada da Caverna
+        2: (400, 190),    # Salão Principal
+        3: (200, 300),    # Corredor Escuro
+        4: (600, 130),    # Câmara Misteriosa
+        5: (400, 350),    # Ponto de Bifurcação
+        6: (200, 500),    # Passagem Estreita
+        7: (900, 130),    # Sala dos Cristais
+        8: (600, 350),    # Túnel Úmido
+        9: (400, 500),    # Abismo Profundo
+        10: (200, 730),   # Sala do Tesouro
+        11: (800, 250),   # Câmara Secreta
+        12: (900, 350),   # Gruta Profunda
+        13: (600, 550),   # Salão dos Espelhos
+        14: (400, 650),   # Rio Subterrâneo
+        15: (750, 650),   # Altar Antigo
+    }
+    
+    # Criando os nós
+    locais = [
+        (1, "Entrada da Caverna"),
+        (2, "Salão Principal"),
+        (3, "Corredor Escuro"),
+        (4, "Câmara Misteriosa"),
+        (5, "Ponto de Bifurcação"),
+        (6, "Passagem Estreita"),
+        (7, "Sala dos Cristais"),
+        (8, "Túnel Úmido"),
+        (9, "Abismo Profundo"),
+        (10, "Sala do Tesouro"),
+        (11, "Câmara Secreta"),
+        (12, "Gruta Profunda"),
+        (13, "Salão dos Espelhos"),
+        (14, "Rio Subterrâneo"),
+        (15, "Altar Antigo")
+    ]
+    
+    for id, nome in locais:
+        pos_x, pos_y = posicoes[id]
+        grafo.adicionar_no(NoGrafo(id, nome, pos_x, pos_y))
+    
+    # Adicionando arestas (caminhos entre locais)
+    conexoes = [
+        (1, 2), (1, 3),
+        (2, 4), (2, 5),
+        (3, 5), (3, 6),
+        (4, 7), (4, 8),
+        (5, 8), (5, 9),
+        (6, 9), (6, 10),
+        (7, 11), (7, 12),
+        (8, 12), (8, 13),
+        (9, 13), (9, 14),
+        (10, 14), (10, 15),
+        (11, 15), (12, 13),
+        (13, 14), (14, 15)
+    ]
+    
+    for no1, no2 in conexoes:
+        grafo.adicionar_aresta(no1, no2)
+    
+    # Definindo o tesouro
+    grafo.nos[15].definir_tesouro()  # Altar Antigo
+    
+    # Definindo armadilhas
+    armadilhas = [4, 10, 13]  # Câmara Misteriosa, Abismo Profundo, Gruta Profunda
+    for arm_id in armadilhas:
+        grafo.nos[arm_id].definir_armadilha()
+    
+    return grafo
+
+class Botao:
+    def __init__(self, x, y, largura, altura, texto, cor=CINZA, cor_hover=CINZA_ESCURO, cor_texto=PRETO):
+        self.rect = pygame.Rect(x, y, largura, altura)
+        self.texto = texto
+        self.cor = cor
+        self.cor_original = cor
+        self.cor_hover = cor_hover
+        self.cor_texto = cor_texto
+        self.ativo = True
+    
+    def desenhar(self, tela):
+        if not self.ativo:
+            # Desenha botão desativado
+            pygame.draw.rect(tela, CINZA_ESCURO, self.rect)
+            pygame.draw.rect(tela, PRETO, self.rect, 2)
+            texto_superficie = fonte_media.render(self.texto, True, (150, 150, 150))
+        else:
+            # Verifica se o mouse está sobre o botão
+            pos_mouse = pygame.mouse.get_pos()
+            if self.rect.collidepoint(pos_mouse):
+                pygame.draw.rect(tela, self.cor_hover, self.rect)
+            else:
+                pygame.draw.rect(tela, self.cor, self.rect)
+            
+            # Borda do botão
+            pygame.draw.rect(tela, PRETO, self.rect, 2)
+            
+            # Texto do botão
+            texto_superficie = fonte_media.render(self.texto, True, self.cor_texto)
+        
+        # Centraliza o texto no botão
+        texto_rect = texto_superficie.get_rect(center=self.rect.center)
+        tela.blit(texto_superficie, texto_rect)
+    
+    def clicado(self, pos):
+        return self.ativo and self.rect.collidepoint(pos)
