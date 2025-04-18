@@ -121,3 +121,7 @@ python3 jogo_caca_tesouro_pygame.py
 deactivate
 ```
 ## Outros 
+
+**Link de Apresentação:** [Link do vídeo](https://youtu.be/we66PGZ0TCI?si=LucEeurfj__8MA7x)
+
+
