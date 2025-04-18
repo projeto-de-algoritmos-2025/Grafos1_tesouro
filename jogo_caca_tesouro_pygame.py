@@ -488,3 +488,103 @@ class Botao:
     
     def clicado(self, pos):
         return self.ativo and self.rect.collidepoint(pos)
+
+class Jogo:
+    def __init__(self):
+        self.grafo = criar_mapa()
+        self.no_atual_id = 1  # Começa na Entrada da Caverna
+        self.no_tesouro_id = 15  # Altar Antigo
+        self.caminho_atual = None
+        self.historico_movimentos = [1]  # Começa na entrada
+        self.estado = "JOGANDO"  # JOGANDO, VITORIA, DERROTA, ANIMANDO_BFS, ANIMANDO_DFS
+        self.mensagem = "Bem-vindo à caça ao tesouro! Encontre o tesouro e evite as armadilhas."
+        
+        # Área de informações (painel direito)
+        self.painel_info = pygame.Rect(1050, 0, 350, ALTURA)
+        
+        # Botões - Ajuste para o novo tamanho de tela
+        self.botoes = {
+            "mover": Botao(1070, 390, 310, 50, "Mover para o Local Selecionado", CINZA),
+            "bfs": Botao(1070, 450, 310, 50, "Encontrar caminho (BFS)", AZUL),
+            "dfs": Botao(1070, 510, 310, 50, "Explorar caminho (DFS)", ROXO),
+            "seguir": Botao(1070, 570, 310, 50, "Seguir Caminho Automaticamente", VERDE),
+            "reiniciar": Botao(1070, 840, 310, 50, "Reiniciar Jogo", LARANJA)
+        }
+        
+        # Desativa o botão de seguir caminho inicialmente
+        self.botoes["seguir"].ativo = False
+        
+        self.no_selecionado = None
+        self.algoritmo_usado = None
+        
+        # Variáveis para animação 
+        self.historico_busca = []
+        self.indice_historico = 0
+        self.visitados = set()
+        self.fronteira = set()
+        self.caminho_atual_bfs = None
+        self.armadilhas_evitadas = set()
+        self.tempo_ultimo_passo = 0
+        self.intervalo_animacao = 700  # milissegundos (aumentado para melhor visualização)
+    
+    def reiniciar(self):
+        self.grafo = criar_mapa()
+        self.no_atual_id = 1
+        self.caminho_atual = None
+        self.historico_movimentos = [1]
+        self.estado = "JOGANDO"
+        self.mensagem = "Jogo reiniciado! Boa sorte!"
+        self.no_selecionado = None
+        self.algoritmo_usado = None
+        self.botoes["seguir"].ativo = False
+        
+        # Limpa variáveis de animação
+        self.historico_busca = []
+        self.indice_historico = 0
+        self.visitados = set()
+        self.fronteira = set()
+        self.caminho_atual_bfs = None
+        self.armadilhas_evitadas = set()
+    
+    def mover_para(self, no_id):
+        if no_id in self.grafo.arestas[self.no_atual_id]:
+            self.no_atual_id = no_id
+            self.historico_movimentos.append(no_id)
+            
+            # Verifica se caiu em armadilha
+            if self.grafo.nos[no_id].eh_armadilha:
+                self.estado = "DERROTA"
+                self.mensagem = f"Oh não! Você caiu em uma armadilha na {self.grafo.nos[no_id].nome}!"
+            
+            # Verifica se encontrou o tesouro
+            elif self.grafo.nos[no_id].eh_tesouro:
+                self.estado = "VITORIA"
+                self.mensagem = f"Parabéns! Você encontrou o tesouro na {self.grafo.nos[no_id].nome}!"
+            
+            else:
+                self.mensagem = f"Você se moveu para {self.grafo.nos[no_id].nome}."
+            
+            return True
+        return False
+    
+    def calcular_caminho(self, algoritmo):
+        if algoritmo == "BFS":
+            self.estado = "ANIMANDO_BFS"
+            self.caminho_atual, self.historico_busca, self.visitados, self.fronteira, self.armadilhas_evitadas = self.grafo.busca_bfs(self.no_atual_id, self.no_tesouro_id)
+            self.algoritmo_usado = "BFS"
+            self.indice_historico = 0
+            self.mensagem = "Iniciando busca com BFS. Observe a exploração dos caminhos..."
+            self.tempo_ultimo_passo = pygame.time.get_ticks()
+        else:  # DFS
+            self.estado = "ANIMANDO_DFS"
+            self.caminho_atual, self.historico_busca, self.visitados, self.fronteira, self.armadilhas_evitadas = self.grafo.busca_dfs(self.no_atual_id, self.no_tesouro_id)
+            self.algoritmo_usado = "DFS"
+            self.indice_historico = 0
+            self.mensagem = "Iniciando busca com DFS. Observe a exploração dos caminhos..."
+            self.tempo_ultimo_passo = pygame.time.get_ticks()
+        
+        if self.caminho_atual:
+            self.botoes["seguir"].ativo = True
+        else:
+            self.mensagem = "Não foi possível encontrar um caminho até o tesouro!"
+    
